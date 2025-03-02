@@ -1,0 +1,4 @@
+filename,prediction,confidence
+D16-base -blue.png,unknown,0.9995722
+D16-base-undertest.png,pass,0.9999993
+D16-base.png,led_missing,0.9999622
