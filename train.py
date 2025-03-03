@@ -120,6 +120,7 @@ history = model.fit(
 model.save('image_classifier.keras')
 
 print("Training complete. Model saved as image_classifier.keras")
+
 # --- Confusion Matrix Code ---
 
 predictions = model.predict(validation_dataset, steps=validation_generator.samples // batch_size)
