@@ -1,6 +1,6 @@
 filename,prediction,confidence
-D16-base -blue-2.png,unknown,0.93173057
-D16-base -only LED blue.png,led_missing,0.9999161
-D16-base-undertest.png,led_missing,0.9999938
-D16-base.png,pass,0.9999355
-D16-total blue.png,unknown,0.7842354
+D16-base -blue-2.png,unknown,0.58570683
+D16-base -only LED blue.png,unknown,0.49468866
+D16-base-undertest.png,unknown,0.5118573
+D16-base.png,unknown,0.5771704
+D16-total blue.png,unknown,0.74471945
