@@ -9,6 +9,12 @@ import numpy as np
 # Load the trained model
 model = tf.keras.models.load_model('image_classifier.keras')  # Load .keras model
 
+data_dir = 'images'
+
+# Image dimensions
+img_height, img_width = 100, 100
+batch_size = 8
+
 # Path to the test images folder
 test_images_dir = 'test_images' # Corrected path
 
@@ -20,11 +26,24 @@ filenames = []
 predictions = []
 confidences = [] #add confidence level.
 
+# ImageDataGenerator for validation data (only rescaling)
+validation_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255)
+
+# Create validation generator from directory
+validation_generator = validation_datagen.flow_from_directory(
+    data_dir,
+    target_size=(img_height, img_width),
+    batch_size=batch_size,
+    class_mode='categorical',
+    shuffle=False #Very important to set shuffle to false.
+)
+
 # Manual class label mapping
-class_labels = {0: 'pass', 1: 'led_missing'}  # Replace with your actual class names. Make sure it matches the training data.
+# class_labels = {0: 'pass', 1: 'led_missing'}  # Replace with your actual class names. Make sure it matches the training data.
+class_labels = {v: k for k, v in validation_generator.class_indices.items()}
 
 # Confidence threshold (adjust as needed)
-confidence_threshold = 0.9999
+confidence_threshold = 0.51
 
 # Loop through the images
 for image_file in image_files:
