@@ -1,15 +1,13 @@
 import tensorflow as tf
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout, Concatenate, Input
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.applications import ResNet50  # Import ResNet50 pre-trained model
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout  # Import necessary layers
+from tensorflow.keras.models import Model  # Import the Model class for creating functional models
+from tensorflow.keras.callbacks import EarlyStopping  # Import EarlyStopping callback
+from tensorflow.keras.preprocessing.image import ImageDataGenerator  # Import ImageDataGenerator for data augmentation
 import numpy as np
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix  # Import confusion matrix for evaluation
 import matplotlib.pyplot as plt
 import seaborn as sns
-import cv2
-import os
 
 # Path to your image dataset
 data_dir = 'images'
@@ -18,74 +16,35 @@ data_dir = 'images'
 img_height, img_width = 100, 100
 batch_size = 8
 
-# Function to calculate color deviation using OpenCV
-def calculate_color_deviation(image_path):
-    image = cv2.imread(image_path)
-    image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-    lower_lime = np.array([30, 100, 100])
-    upper_lime = np.array([90, 255, 255])
-
-    mask = cv2.inRange(image_hsv, lower_lime, upper_lime)
-
-    total_pixels = mask.shape[0] * mask.shape[1]
-    non_lime_pixels = total_pixels - cv2.countNonZero(mask)
-    deviation_percentage = (non_lime_pixels / total_pixels) * 100
-
-    return deviation_percentage
-
-# Function to load and augment images, including color deviation calculation
-def load_and_augment(image_path, label):
-    image = cv2.imread(image_path.numpy().decode('utf-8'))
-    if image is None: #check if the image is loaded.
-        print(f"Error loading image: {image_path.numpy().decode('utf-8')}")
-        return np.zeros((img_height,img_width,3),dtype=np.float32), 0.0, label #return default values.
-    deviation = calculate_color_deviation(image_path.numpy().decode('utf-8'))
-    image = cv2.resize(image, (img_height, img_width))
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = image / 255.0
-
-    image = image.astype(np.float32) #convert to float32
-    image = tf.image.random_brightness(image, max_delta=0.2)
-    image = tf.image.random_flip_left_right(image)
-    image = tf.image.rgb_to_grayscale(image)
-    image = tf.image.grayscale_to_rgb(image)
-
-    return image, deviation, label
-
-# TensorFlow wrapper for load_and_augment function
-def tf_load_and_augment(image_path, label):
-    image, deviation, label = tf.py_function(load_and_augment, inp=[image_path, label], Tout=[tf.float32, tf.float32, tf.int32])
-    image.set_shape([img_height, img_width, 3])
-    deviation.set_shape([])
-    label.set_shape([])
-    label = tf.one_hot(label, depth=train_generator.num_classes)
-    label.set_shape([train_generator.num_classes])
-    return (image, deviation), label
-
-# Function to create TensorFlow datasets from generators
-def create_dataset(generator):
-    image_paths = [os.path.join(generator.directory, filename) for filename in generator.filenames]
-    labels = generator.classes
-
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, labels))
-    dataset = dataset.map(tf_load_and_augment)
-    dataset = dataset.batch(batch_size)
-    return dataset
+# Custom data augmentation function
+def augment_image(image, label):
+    image = tf.image.random_brightness(image, max_delta=0.2)  # Adjust brightness
+    image = tf.image.random_flip_left_right(image)  # Random horizontal flips
+    image = tf.image.rgb_to_grayscale(image) #Converts to grayscale
+    image = tf.image.grayscale_to_rgb(image) #Converts back to rgb, so that the pretrained model can use it.
+    return image, label
 
 # ImageDataGenerator for basic preprocessing and augmentation
-train_datagen = ImageDataGenerator(validation_split=0.2)
+train_datagen = ImageDataGenerator(
+    rescale=1./255,  # Rescale pixel values to [0, 1]
+    rotation_range=20,  # Random rotations
+    width_shift_range=0.2,  # Random horizontal shifts
+    height_shift_range=0.2,  # Random vertical shifts
+    shear_range=0.2,  # Random shear transformations
+    zoom_range=0.2,  # Random zooms
+    validation_split=0.2  # Split data for validation
+)
 
 # ImageDataGenerator for validation data (only rescaling)
-validation_datagen = ImageDataGenerator(validation_split=0.2)
+validation_datagen = ImageDataGenerator(rescale=1./255, validation_split=0.2)
 
 # Create data generators from directory
 train_generator = train_datagen.flow_from_directory(
     data_dir,
     target_size=(img_height, img_width),
     batch_size=batch_size,
-    class_mode='categorical',
-    subset='training'
+    class_mode='categorical',  # Categorical labels (one-hot encoded)
+    subset='training'  # Use training subset
 )
 
 validation_generator = validation_datagen.flow_from_directory(
@@ -96,87 +55,82 @@ validation_generator = validation_datagen.flow_from_directory(
     subset='validation'
 )
 
-# Create TensorFlow datasets
-train_dataset = create_dataset(train_generator)
-validation_dataset = create_dataset(validation_generator)
+# Convert generators to tf.data.Dataset for custom augmentation
+train_dataset = tf.data.Dataset.from_generator(
+    lambda: train_generator,
+    output_signature=(tf.TensorSpec(shape=(None, img_height, img_width, 3), dtype=tf.float32), tf.TensorSpec(shape=(None, train_generator.num_classes), dtype=tf.float32)))
 
-# Define input layers for ResNet50 and color deviation
-image_input = Input(shape=(img_height, img_width, 3))
-deviation_input = Input(shape=(1,))
+# Apply custom augmentation function to the training dataset
+train_dataset = train_dataset.map(augment_image)
+
+validation_dataset = tf.data.Dataset.from_generator(
+    lambda: validation_generator,
+    output_signature=(tf.TensorSpec(shape=(None, img_height, img_width, 3), dtype=tf.float32), tf.TensorSpec(shape=(None, validation_generator.num_classes), dtype=tf.float32)))
 
 # Load ResNet50 pre-trained model (excluding top classification layer)
-base_model = ResNet50(weights='imagenet', include_top=False, input_tensor=image_input)
+base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
 
 # Freeze the base model layers
 base_model.trainable = False
 
 # Add custom classification layers
 x = base_model.output
-x = GlobalAveragePooling2D()(x)
-x = Concatenate()([x, deviation_input])
-x = Dense(128, activation='relu')(x)
-x = Dropout(0.5)(x)
-predictions = Dense(train_generator.num_classes, activation='softmax')(x)
+x = GlobalAveragePooling2D()(x)  # Global average pooling to reduce spatial dimensions
+x = Dense(128, activation='relu')(x)  # Dense layer with ReLU activation
+x = Dropout(0.5)(x)  # Dropout for regularization
+predictions = Dense(train_generator.num_classes, activation='softmax')(x)  # Output layer with softmax activation
 
 # Create the final model
-model = Model(inputs=[image_input, deviation_input], outputs=predictions)
+model = Model(inputs=base_model.input, outputs=predictions)
+
+# Fine-tuning
+base_model.trainable = True
+fine_tune_at = 150  # Unfreeze the last 100 layers
+for layer in base_model.layers[:fine_tune_at]:
+    layer.trainable = False
 
 # Compile the model
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.000005),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
+              loss='categorical_crossentropy',  # Categorical crossentropy loss
+              metrics=['accuracy'])  # Track accuracy
+
 
 # Train the model
 epochs = 200
-early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)  # Early stopping callback
 
 history = model.fit(
     train_dataset,
     epochs=epochs,
     validation_data=validation_dataset,
+    steps_per_epoch=train_generator.samples // batch_size,
+    validation_steps=validation_generator.samples // batch_size,
     callbacks=[early_stopping]
 )
 
-# Fine-tuning
-base_model.trainable = True
-fine_tune_at = 150
-for layer in base_model.layers[:fine_tune_at]:
-    layer.trainable = False
-
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.000005),
-              loss='categorical_crossentropy',
-              metrics=['accuracy'])
-
 history_fine = model.fit(
     train_dataset,
-    epochs=100 + 25,
+    epochs=100 + 25,  # Train for more epochs
     initial_epoch=history.epoch[-1],
     validation_data=validation_dataset,
+    steps_per_epoch=train_generator.samples // batch_size,
+    validation_steps=validation_generator.samples // batch_size,
     callbacks=[early_stopping]
 )
 
 # Save the trained model
 model.save('resnet50_image_classifier.keras')
+
 print("Training complete. Model saved as resnet50_image_classifier.keras")
 
 # --- Confusion Matrix Code ---
 
-# Function to make predictions with color deviation
-def predict_with_deviation(model, generator):
-    predictions = []
-    true_classes = []
-    for image_path, label in tf.data.Dataset.from_tensor_slices((generator.filenames, generator.classes)):
-        image, deviation, _ = load_and_augment(image_path, label)
-        prediction = model.predict((np.expand_dims(image, axis=0), np.expand_dims(deviation, axis=0)))
-        predictions.append(prediction[0])
-        true_classes.append(label)
-    return np.array(predictions), np.array(true_classes)
+# Generate predictions on the validation dataset
+predictions = model.predict(validation_dataset, steps=validation_generator.samples // batch_size)
+predicted_classes = np.argmax(predictions, axis=1)  # Get predicted class indices
 
-# Make predictions on the validation dataset
-predictions, true_classes = predict_with_deviation(model, validation_generator)
-
-# Get predicted class indices
-predicted_classes = np.argmax(predictions, axis=1)
+# Get true class indices from the validation generator
+true_classes = validation_generator.classes[validation_generator.index_array[:validation_generator.samples // batch_size * batch_size]]
 
 # Create confusion matrix
 cm = confusion_matrix(true_classes, predicted_classes)
