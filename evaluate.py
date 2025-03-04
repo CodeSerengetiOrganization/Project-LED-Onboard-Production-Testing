@@ -7,7 +7,7 @@ import numpy as np
 
 
 # Load the trained model
-model = tf.keras.models.load_model('image_classifier.keras')  # Load .keras model
+model = tf.keras.models.load_model('resnet50_image_classifier.keras')  # Load .keras model
 
 data_dir = 'images'
 
@@ -43,7 +43,7 @@ validation_generator = validation_datagen.flow_from_directory(
 class_labels = {v: k for k, v in validation_generator.class_indices.items()}
 
 # Confidence threshold (adjust as needed)
-confidence_threshold = 0.51
+confidence_threshold = 0.8
 
 # Loop through the images
 for image_file in image_files:
