@@ -33,6 +33,7 @@ train_datagen = ImageDataGenerator(
     shear_range=0.2,  # Random shear transformations
     zoom_range=0.2,  # Random zooms
     validation_split=0.2  # Split data for validation
+
 )
 
 # ImageDataGenerator for validation data (only rescaling)
@@ -99,6 +100,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.000005),
 epochs = 200
 early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)  # Early stopping callback
 
+
 history = model.fit(
     train_dataset,
     epochs=epochs,
@@ -137,6 +139,7 @@ cm = confusion_matrix(true_classes, predicted_classes)
 
 # Plot confusion matrix
 plt.figure(figsize=(8, 6))
+
 sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
 plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
