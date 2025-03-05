@@ -7,6 +7,7 @@ import cv2  # Import OpenCV
 
 # Load the trained model
 model = tf.keras.models.load_model('resnet50_image_classifier.keras')  # Load .keras model
+# model = tf.keras.models.load_model('VGG16_image_classifier.keras')  # Load .keras model
 
 data_dir = 'images'
 

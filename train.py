@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications import ResNet50, VGG16  # Import VGG16
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense, Dropout, Input
 from tensorflow.keras.models import Model
 from tensorflow.keras.callbacks import EarlyStopping
@@ -78,8 +78,8 @@ validation_dataset = tf.data.Dataset.from_generator(
     output_signature=(tf.TensorSpec(shape=(None, img_height, img_width, 3), dtype=tf.float32), tf.TensorSpec(shape=(None, validation_generator.num_classes), dtype=tf.float32)))
 
 # Load ResNet50 pre-trained model (excluding top classification layer)
-base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
-
+# base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
+base_model = VGG16(weights='imagenet', include_top=False, input_shape=(img_height, img_width, 3))
 # Freeze the base model layers
 base_model.trainable = False
 
@@ -130,6 +130,8 @@ history_fine = model.fit(
 # Save the trained model
 model.save('resnet50_image_classifier.keras')
 print("Training complete. Model saved as resnet50_image_classifier.keras")
+# model.save('VGG16_image_classifier.keras')
+# print("Training complete. Model saved as VGG16_image_classifier.keras")
 
 # --- Confusion Matrix Code ---
 
