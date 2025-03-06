@@ -1,4 +1,4 @@
 lime_hue_range: (86, 95)
 lime_saturation_range: (200, 255)
 lime_value_range: (170, 255)
- confidence threshold: 80
+ confidence threshold: 0.6
