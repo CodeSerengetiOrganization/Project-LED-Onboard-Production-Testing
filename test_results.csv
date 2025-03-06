@@ -1,7 +1,7 @@
 filename,prediction,confidence,color_deviation_percentage
-D16-base -only LED blue-should be Unknown-not in Produciton.png,led_missing,0.7103998064994812,52.559999999999995
-D16-base-one of training example.png,led_missing,0.6203354001045227,47.18
+D16-base -only LED blue-should be Unknown-not in Produciton.png,pass,0.6337511539459229,52.559999999999995
+D16-base-one of training example.png,pass,0.6596676707267761,47.18
 D16-blue backround-should be Unknow-not in production.png,unknown,0.0,96.52
 D16-blue LED-should be Unknown.png,unknown,0.0,100.0
-D16-should be LED missing.png,led_missing,0.7258647084236145,53.459999999999994
-D16-should be Pass.png,led_missing,0.6199501752853394,47.910000000000004
+D16-should be LED missing.png,pass,0.613763153553009,53.459999999999994
+D16-should be Pass.png,pass,0.6585299968719482,47.910000000000004

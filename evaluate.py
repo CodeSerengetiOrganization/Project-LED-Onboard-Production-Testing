@@ -49,9 +49,9 @@ confidence_threshold = 0.6
 lime_hue_range = (86, 95)
 lime_saturation_range = (200, 255)
 lime_value_range = (170, 255)
-threshold = 80  # Adjust as needed
+color_deviation_percentage_threshold = 80  # Adjust as needed
 
-def predict_with_color_check(image_path, model, lime_hue_range, lime_saturation_range, lime_value_range, threshold, confidence_threshold):
+def predict_with_color_check(image_path, model, lime_hue_range, lime_saturation_range, lime_value_range, color_deviation_percentage_threshold, confidence_threshold):
     image = cv2.imread(image_path)
     image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
@@ -67,7 +67,7 @@ def predict_with_color_check(image_path, model, lime_hue_range, lime_saturation_
 
     print(f"Image: {image_path}, Deviation Percentage: {deviation_percentage:.2f}%")
 
-    if deviation_percentage > threshold:
+    if deviation_percentage > color_deviation_percentage_threshold:
         return "unknown", 0.0
     else:
         # Use the already loaded image (from cv2)
@@ -89,7 +89,7 @@ def predict_with_color_check(image_path, model, lime_hue_range, lime_saturation_
 # Loop through the images
 for image_file in image_files:
     img_path = os.path.join(test_images_dir, image_file)
-    predicted_label, max_prob = predict_with_color_check(img_path, model, lime_hue_range, lime_saturation_range, lime_value_range, threshold, confidence_threshold)
+    predicted_label, max_prob = predict_with_color_check(img_path, model, lime_hue_range, lime_saturation_range, lime_value_range, color_deviation_percentage_threshold, confidence_threshold)
 
     filenames.append(image_file)
     predictions.append(predicted_label)
@@ -105,7 +105,7 @@ with open('test_results_parameters.txt', 'w') as param_file:
     param_file.write(f"lime_hue_range: {lime_hue_range}\n")
     param_file.write(f"lime_saturation_range: {lime_saturation_range}\n")
     param_file.write(f"lime_value_range: {lime_value_range}\n")
-    param_file.write(f" confidence threshold: {threshold}\n")
+    param_file.write(f" confidence threshold: {confidence_threshold}\n")
 
 
 print("Evaluation complete. Results saved to test_results.csv")
